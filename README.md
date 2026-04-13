@@ -1,16 +1,37 @@
-# React + Vite
+# 英単語学習アプリ
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## アプリ概要
+英単語の登録・テスト・英会話を通して効率よく学習できるWebアプリです。  
+苦手単語を自動で判定し、重点的に学習できる仕組みを実装しています。
 
-Currently, two official plugins are available:
+## 主な機能
+- 英単語の登録（英語・日本語・例文）
+- 辞書候補の自動取得
+- 翻訳機能
+- 4択テスト（習熟度に応じた出題）
+- 苦手単語の抽出
+- AI英会話（単語使用ミッション付き）
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 使用技術
+- フロントエンド: React / Vite
+- バックエンド: Node.js / Express
+- API:
+  - OpenAI API
+  - DeepL API
+- データ管理: LocalStorage
+- デプロイ:
+  - Vercel（フロント）
+  - Render（バックエンド）
 
-## React Compiler
+## 公開URL
+https://english-app-nu-nine.vercel.app/
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 工夫した点
+- 苦手単語を優先的に出題するアルゴリズムを実装
+- 英会話で使う単語を指定してアウトプットを促進
+- 単語クリックで登録できるUXを実装
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 今後の改善
+- ログイン機能
+- データのクラウド保存
+- スマホUI対応
