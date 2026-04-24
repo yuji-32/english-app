@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import "./App.css";
 
+import { defaultWords } from "./data/defaultWords";
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 
@@ -13,9 +15,24 @@ function App() {
   const [isLoadingSuggestion, setIsLoadingSuggestion] = useState(false);
   const [suggestionMessage, setSuggestionMessage] = useState("");
 
+  const [wordTab, setWordTab] = useState("default");
+  const [defaultLevelTab, setDefaultLevelTab] = useState("easy");
+
   const [words, setWords] = useState(() => {
-    const savedWords = localStorage.getItem("english_words");
-    return savedWords ? JSON.parse(savedWords) : [];
+  const saved = localStorage.getItem("english_words");
+  
+  if (saved) {
+    const parsed = JSON.parse(saved);
+
+    const existingIds = new Set(parsed.map((w) => String(w.id)));
+    const missingDefaults = defaultWords.filter(
+      (w) => !existingIds.has(String(w.id))
+    );
+
+    return [...missingDefaults, ...parsed];
+  }
+
+  return defaultWords;
   });
 
   const [screen, setScreen] = useState("home");
@@ -35,19 +52,63 @@ function App() {
   const [clickedWord, setClickedWord] = useState("");
   const [feedbackWord, setFeedbackWord] = useState("");
 
+  function getDefaultDifficulty(id) {
+  const num = Number(String(id).replace("default-", ""));
+
+  if (!num) return "user";
+
+  if (num <= 100) return "easy";
+  if (num <= 200) return "medium";
+  return "hard";
+}
+
   function normalizeWord(item) {
-    return {
-      ...item,
-      level: item.level ?? 0,
-      correct: item.correct ?? 0,
-      wrong: item.wrong ?? 0,
-      example: item.example ?? "",
-      confusionGroup: item.confusionGroup ?? [],
-    };
-  }
+  return {
+    ...item,
+    level: item.level ?? 0,
+    correct: item.correct ?? 0,
+    wrong: item.wrong ?? 0,
+    example: item.example ?? "",
+    confusionGroup: item.confusionGroup ?? [],
+    source: item.source ?? "user",
+    difficulty: item.difficulty ?? getDefaultDifficulty(item.id),
+  };
+}
 
   const normalizedWords = words.map(normalizeWord);
+  const easyWords = normalizedWords.filter(
+    w => w.difficulty === "easy" && w.source === "default"
+  );
 
+  const mediumWords = normalizedWords.filter(
+    w => w.difficulty === "medium" && w.source === "default"
+  );
+
+  const hardWords = normalizedWords.filter(
+    w => w.difficulty === "hard" && w.source === "default"
+  );
+
+  const defaultWordList = normalizedWords.filter(
+    (w) => w.source === "default"
+  );
+
+  const userWordList = normalizedWords.filter(
+    (w) => w.source === "user"
+  );
+
+  const userWords = normalizedWords.filter(
+    (w) => w.source === "user" && w.word?.trim() && w.meaning?.trim()
+  );
+
+  const visibleDefaultWords =
+  defaultLevelTab === "easy"
+    ? easyWords
+    : defaultLevelTab === "medium"
+    ? mediumWords
+    : hardWords;
+    
+    const visibleWords = wordTab === "default" ? visibleDefaultWords : userWordList;
+  
   function saveWords(newWords) {
     setWords(newWords);
     localStorage.setItem("english_words", JSON.stringify(newWords));
@@ -63,45 +124,72 @@ function App() {
   }
 
   function buildChoices(correctWord, sourceWords) {
-    const otherMeanings = sourceWords
-      .filter((w) => w.id !== correctWord.id && w.meaning.trim() !== "")
-      .map((w) => w.meaning);
+  const otherMeanings = sourceWords
+    .filter(
+      (w) =>
+        w.id !== correctWord.id &&
+        w.meaning &&
+        w.meaning.trim() !== "" &&
+        w.meaning !== correctWord.meaning
+    )
+    .map((w) => w.meaning);
 
-    const uniqueOtherMeanings = [...new Set(otherMeanings)];
-    const wrongChoices = shuffleArray(uniqueOtherMeanings).slice(0, 3);
+  const uniqueOtherMeanings = [...new Set(otherMeanings)];
+  const wrongChoices = shuffleArray(uniqueOtherMeanings).slice(0, 3);
 
-    return shuffleArray([correctWord.meaning, ...wrongChoices]);
-  }
+  return shuffleArray([correctWord.meaning, ...wrongChoices]);
+}
 
   function pickRandomWord(targetWords = normalizedWords) {
-    if (targetWords.length === 0) return;
+  const normalizedTargetWords = targetWords
+    .map(normalizeWord)
+    .filter((w) => w.word && w.meaning);
 
-    const normalizedTargetWords = targetWords.map(normalizeWord);
-    const notMasteredWords = normalizedTargetWords.filter((w) => w.level < 3);
-    const pool =
-      notMasteredWords.length > 0 ? notMasteredWords : normalizedTargetWords;
-
-    const weightedWords = pool.flatMap((w) => {
-      const weight = 4 - w.level;
-      return Array(weight).fill(w);
-    });
-
-    const nextWord =
-      weightedWords[Math.floor(Math.random() * weightedWords.length)];
-
-    const choices = buildChoices(nextWord, normalizedTargetWords);
-
-    setTestWord(nextWord);
-    setTestChoices(choices);
-    setAnswered(false);
-    setSelectedChoice("");
+  if (normalizedTargetWords.length === 0) {
+    setTestWord(null);
+    setTestChoices([]);
+    return;
   }
 
-  function startTest() {
-    if (normalizedWords.length === 0) return;
-    setScreen("test");
-    pickRandomWord(normalizedWords);
+  const notMasteredWords = normalizedTargetWords.filter((w) => w.level < 3);
+  const pool =
+    notMasteredWords.length > 0 ? notMasteredWords : normalizedTargetWords;
+
+  const weightedWords = pool.flatMap((w) => {
+    const weight = Math.max(1, 4 - (w.level ?? 0));
+    return Array(weight).fill(w);
+  });
+
+  if (weightedWords.length === 0) {
+    setTestWord(null);
+    setTestChoices([]);
+    return;
   }
+
+  const nextWord =
+    weightedWords[Math.floor(Math.random() * weightedWords.length)];
+
+  const choices = buildChoices(nextWord, normalizedTargetWords);
+
+  setTestWord(nextWord);
+  setTestChoices(choices);
+  setAnswered(false);
+  setSelectedChoice("");
+}
+
+function startTest(targetWords = normalizedWords) {
+  const testableWords = targetWords.filter(
+    (w) => w.word?.trim() && w.meaning?.trim()
+  );
+
+  if (testableWords.length === 0) {
+    alert("テストできる単語がありません");
+    return;
+  }
+
+  setScreen("test");
+  pickRandomWord(testableWords);
+}
 
   function handleAnswer(choice) {
     if (!testWord || answered) return;
@@ -189,6 +277,7 @@ function App() {
         wrong: 0,
         level: 0,
         confusionGroup: [],
+        source: "user",
       };
 
       saveWords([newWord, ...words]);
@@ -273,6 +362,7 @@ function App() {
     wrong: 0,
     level: 0,
     confusionGroup: [],
+    source: "user",
   };
 
   saveWords([newWord, ...words]);
@@ -473,31 +563,288 @@ function splitWords(text) {
     .filter((w) => w.wrong > w.correct)
     .sort((a, b) => b.wrong - a.wrong);
 
-  if (screen === "test") {
-    return (
-      <div className="app">
-        <div className="topbar">
-          <h1 className="title">4択テスト</h1>
-          <button className="secondary-button" onClick={() => setScreen("home")}>
-            ← ホーム
+    if (screen === "list") {
+  const visibleDefaultWords =
+    defaultLevelTab === "easy"
+      ? easyWords
+      : defaultLevelTab === "medium"
+      ? mediumWords
+      : hardWords;
+
+      const visibleWordsRaw =
+      wordTab === "default" ? visibleDefaultWords : userWordList;
+
+      const visibleWords = visibleWordsRaw.filter((w) => {
+        const text = `${w.word} ${w.meaning} ${w.example || ""}`.toLowerCase();
+        return text.includes(search.toLowerCase());
+      });
+
+  return (
+    <div className="app">
+      <div className="topbar">
+        <h1 className="title">登録した単語</h1>
+
+        <div className="button-group">
+          <button
+            className={
+              wordTab === "default" ? "primary-button" : "secondary-button"
+            }
+            onClick={() => setWordTab("default")}
+          >
+            初期単語
+          </button>
+
+          <button
+            className={
+              wordTab === "user" ? "primary-button" : "secondary-button"
+            }
+            onClick={() => setWordTab("user")}
+          >
+            自分の単語
           </button>
         </div>
 
-        {testWord ? (
-          <div className="card">
-            <p className="label">この英単語の意味を選ぼう</p>
-            <div className="quiz-word">{testWord.word || "（英語未入力）"}</div>
+        <button
+          className="secondary-button"
+          onClick={() => setScreen("home")}
+        >
+          ← ホーム
+        </button>
+      </div>
 
-            <div className="word-list">
+      <div className="card">
+        <h2>検索</h2>
+        <input
+          className="input"
+          placeholder="単語・意味・例文で検索"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {wordTab === "default" && (
+        <div className="card">
+          <div className="button-group">
+            <button
+              className={
+                defaultLevelTab === "easy"
+                  ? "primary-button"
+                  : "secondary-button"
+              }
+              onClick={() => setDefaultLevelTab("easy")}
+            >
+              簡単
+            </button>
+
+            <button
+              className={
+                defaultLevelTab === "medium"
+                  ? "primary-button"
+                  : "secondary-button"
+              }
+              onClick={() => setDefaultLevelTab("medium")}
+            >
+              普通
+            </button>
+
+            <button
+              className={
+                defaultLevelTab === "hard"
+                  ? "primary-button"
+                  : "secondary-button"
+              }
+              onClick={() => setDefaultLevelTab("hard")}
+            >
+              難しい
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <h2>単語一覧</h2>
+
+        {visibleWords.length === 0 ? (
+          <p className="empty-text">単語がありません</p>
+        ) : (
+          <div className="word-list">
+            {visibleWords.map((w) => {
+              const total = w.correct + w.wrong;
+              const rate =
+                total === 0 ? 0 : Math.round((w.correct / total) * 100);
+
+              return (
+                <div className="word-card" key={w.id}>
+                  <div className="word-header">
+                    <div>
+                      <div className="word-title">
+                        {w.word || "（英語未入力）"}
+                      </div>
+                      <div className="word-meaning">
+                        {w.meaning || "（日本語未入力）"}
+                      </div>
+                    </div>
+
+                    <div className="button-group">
+                      <button
+                        className="secondary-button"
+                        onClick={() => {
+                          startEdit(w);
+                          setScreen("home");
+                        }}
+                      >
+                        編集
+                      </button>
+
+                      <button
+                        className="delete-button"
+                        onClick={() => deleteWord(w.id)}
+                      >
+                        削除
+                      </button>
+                    </div>
+                  </div>
+
+                  {w.example && (
+                    <div className="example-text">例文: {w.example}</div>
+                  )}
+
+                  <div style={{ marginTop: "8px" }}>
+                    <div style={{ fontSize: "12px", marginBottom: "4px" }}>
+                      習熟度 {rate}%
+                    </div>
+
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "8px",
+                        background: "#eee",
+                        borderRadius: "999px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${rate}%`,
+                          height: "100%",
+                          background: "#4caf50",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>苦手な単語</h2>
+
+        {weakWords.length === 0 ? (
+          <p className="empty-text">まだ苦手単語はありません</p>
+        ) : (
+          <div className="weak-list">
+            {weakWords.slice(0, 5).map((w) => (
+              <div className="weak-item" key={w.id}>
+                <strong>{w.word || "（英語未入力）"}</strong> -{" "}
+                {w.meaning || "（日本語未入力）"}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+if (screen === "testMenu") {
+  return (
+    <div className="app">
+      <div className="topbar">
+        <h1 className="title">テスト選択</h1>
+        <button
+          className="secondary-button"
+          onClick={() => setScreen("home")}
+        >
+          ← ホーム
+        </button>
+      </div>
+
+      <div className="card">
+        <h2>難易度を選択</h2>
+
+        <div className="button-group">
+          <button
+            className="primary-button full-button"
+            onClick={() => startTest(easyWords)}
+          >
+            簡単
+          </button>
+
+          <button
+            className="primary-button full-button"
+            onClick={() => startTest(mediumWords)}
+          >
+            普通
+          </button>
+
+          <button
+            className="primary-button full-button"
+            onClick={() => startTest(hardWords)}
+          >
+            難しい
+          </button>
+
+          <button
+          className="secondary-button full-button"
+          onClick={() => startTest(userWords)}
+          >
+            自分の単語
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+if (screen === "test") {
+  return (
+    <div className="app">
+      <div className="topbar">
+        <h1 className="title">4択テスト</h1>
+        <button className="secondary-button" onClick={() => setScreen("home")}>
+          ← ホーム
+        </button>
+      </div>
+
+      {!testWord ? (
+        <div className="card">
+          <p className="empty-text">テストできる単語がありません</p>
+        </div>
+      ) : (
+        <>
+          <div className="card">
+            <h2>問題</h2>
+            <div className="word-title" style={{ fontSize: "28px" }}>
+              {testWord.word}
+            </div>
+            {testWord.example && (
+              <div className="example-text">例文: {testWord.example}</div>
+            )}
+          </div>
+
+          <div className="card">
+            <h2>選択肢</h2>
+            <div className="button-group" style={{ flexDirection: "column" }}>
               {testChoices.map((choice, index) => {
                 const isCorrect = choice === testWord.meaning;
                 const isSelected = choice === selectedChoice;
 
                 let className = "secondary-button full-button";
-
-                if (answered && isCorrect) {
-                  className = "good-button full-button";
-                } else if (answered && isSelected && !isCorrect) {
+                if (answered && isCorrect) className = "good-button full-button";
+                if (answered && isSelected && !isCorrect) {
                   className = "bad-button full-button";
                 }
 
@@ -513,145 +860,34 @@ function splitWords(text) {
                 );
               })}
             </div>
+          </div>
 
-            {answered && (
-              <>
-                <div className="answer-box">
-                  <p>
-                    <span className="label">正解</span>
-                    <br />
-                    <strong>{testWord.meaning}</strong>
-                  </p>
+          {answered && (
+            <div className="card">
+              <h2>結果</h2>
+              <p className="stats">
+                {selectedChoice === testWord.meaning ? "正解！" : "不正解"}
+              </p>
+              <p className="stats">正解: {testWord.meaning}</p>
+              <p className="stats">
+                状態: {getLevelLabel(testWord.level ?? 0)}
+              </p>
 
-                  <p>
-                    <span className="label">状態</span>
-                    <br />
-                    <strong>{getLevelLabel(testWord.level ?? 0)}</strong>
-                  </p>
-
-                  {testWord.example && (
-                    <p className="example-text">例文: {testWord.example}</p>
-                  )}
-                </div>
-
-                <button
-                  className="primary-button full-button"
-                  onClick={goNextQuestion}
-                >
-                  次の問題
+              <div className="button-group">
+                <button className="primary-button" onClick={goNextQuestion}>
+                  次の問題へ
                 </button>
-              </>
-            )}
-
-            <div className="stats">
-              正解: {testWord.correct ?? 0} / 不正解: {testWord.wrong ?? 0}
+                <button
+                  className="secondary-button"
+                  onClick={() => setScreen("home")}
+                >
+                  ホームへ戻る
+                </button>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="card">単語がありません</div>
-        )}
-      </div>
-    );
-  }
-
-  if (screen === "list") {
-  return (
-    <div className="app">
-      <div className="topbar">
-        <h1 className="title">登録した単語</h1>
-        <button className="secondary-button" onClick={() => setScreen("home")}>
-          ← ホーム
-        </button>
-      </div>
-
-      <div className="card">
-        <h2>検索</h2>
-        <input
-          className="input"
-          placeholder="単語・意味・例文で検索"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      <div className="card">
-        <h2>登録した単語</h2>
-
-        <div className="form-grid">
-          <label className="label">並び替え</label>
-          <select
-            className="input"
-            value={sortType}
-            onChange={(e) => setSortType(e.target.value)}
-          >
-            <option value="new">新しい順</option>
-            <option value="old">古い順</option>
-            <option value="weak">苦手順</option>
-            <option value="az">A-Z順</option>
-            <option value="level">習熟度順</option>
-          </select>
-        </div>
-
-        {filteredWords.length === 0 ? (
-          <p className="empty-text">まだ単語がありません</p>
-        ) : (
-          <div className="word-list">
-            {displayWords.map((w) => (
-              <div className="word-card" key={w.id}>
-                <div className="word-header">
-                  <div>
-                    <div className="word-title">{w.word || "（英語未入力）"}</div>
-                    <div className="word-meaning">
-                      {w.meaning || "（日本語未入力）"}
-                    </div>
-                  </div>
-
-                  <div className="button-group">
-                    <button
-                      className="secondary-button"
-                      onClick={() => {
-                        startEdit(w);
-                        setScreen("home");
-                      }}
-                    >
-                      編集
-                    </button>
-                    <button
-                      className="delete-button"
-                      onClick={() => deleteWord(w.id)}
-                    >
-                      削除
-                    </button>
-                  </div>
-                </div>
-
-                {w.example && <div className="example-text">例文: {w.example}</div>}
-
-                <div className="stats">
-                  正解: {w.correct} / 不正解: {w.wrong} / 状態:{" "}
-                  {getLevelLabel(w.level ?? 0)}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="card">
-        <h2>苦手な単語</h2>
-        {weakWords.length === 0 ? (
-          <p className="empty-text">まだ苦手単語はありません</p>
-        ) : (
-          <div className="weak-list">
-            {weakWords.slice(0, 5).map((w) => (
-              <div className="weak-item" key={w.id}>
-                <strong>{w.word || "（英語未入力）"}</strong> -{" "}
-                {w.meaning || "（日本語未入力）"}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -779,7 +1015,10 @@ return (
     </div>
 
     <div className="button-group">
-      <button className="primary-button full-button" onClick={startTest}>
+      <button
+      className="primary-button full-button"
+      onClick={() => setScreen("testMenu")}
+      >
         テストをする
       </button>
 
