@@ -440,21 +440,17 @@ function startTest(targetWords = normalizedWords) {
   const targets = weakWords.slice(0, 3).map((w) => w.word);
 
   setMissionWords(targets);
+
   setChatMessages([
     {
       role: "assistant",
-      english:
-        targets.length > 0
-          ? `Let's practice English. Try to use these words: ${targets.join(", ")}`
-          : "Let's practice English. Please answer in simple English.",
-      japanese:
-        targets.length > 0
-          ? `英会話を練習しよう。できれば次の単語を使ってね: ${targets.join("、")}`
-          : "英会話を練習しよう。やさしい英語で答えてね。",
+      english: "Let's practice English. Feel free to talk to me about anything.",
+      japanese: "英会話を練習しよう。なんでも話しかけてね。",
       correction: "",
       usedWords: [],
     },
   ]);
+
   setChatInput("");
   setScreen("chat");
 }
@@ -930,6 +926,7 @@ if (screen === "chat") {
                 {splitWords(msg.english).map((w, i) => (
                   <span key={i} style={{ marginRight: "6px" }}>
                     <span
+                    title="クリックして単語帳に登録"
                     style={{
                       cursor: "pointer",
                       borderBottom: "1px dotted #999",
@@ -1014,28 +1011,28 @@ return (
       </div>
     </div>
 
-    <div className="button-group">
-      <button
-      className="primary-button full-button"
-      onClick={() => setScreen("testMenu")}
-      >
-        テストをする
-      </button>
+    <div className="home-menu">
+  <button
+    className="menu-btn primary"
+    onClick={() => setScreen("testMenu")}
+  >
+    テスト
+  </button>
 
-      <button
-        className="secondary-button full-button"
-        onClick={() => setScreen("list")}
-      >
-        登録した単語を見る
-      </button>
+  <button
+    className="menu-btn"
+    onClick={() => setScreen("list")}
+  >
+    単語一覧
+  </button>
 
-      <button
-        className="secondary-button full-button"
-        onClick={startChatMission}
-      >
-        AI英会話
-      </button>
-    </div>
+  <button
+    className="menu-btn"
+    onClick={startChatMission}
+  >
+    AI英会話
+  </button>
+</div>
 
     <div className="card">
       <h2>{editingId ? "単語を編集" : "単語を登録"}</h2>
