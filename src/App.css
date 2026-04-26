@@ -122,6 +122,8 @@ button {
 
 button:hover {
   opacity: 0.95;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 button:active {
@@ -298,7 +300,8 @@ button:disabled {
 }
 
 .home-menu {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
   margin: 20px 0;
 }
@@ -308,7 +311,8 @@ button:disabled {
   padding: 16px;
   border-radius: 14px;
   border: none;
-  background: white;
+  background: #f1f5f9;
+  color: #111827;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -317,6 +321,7 @@ button:disabled {
 }
 
 .menu-btn:hover {
+  background: #e2e8f0;
   transform: translateY(-2px);
 }
 
@@ -327,6 +332,29 @@ button:disabled {
 
 .menu-btn.primary:hover {
   background: #1d4ed8;
+}
+
+.icon-button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.icon-button:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
+
+.icon-button:active {
+  transform: scale(0.95);
 }
 
 @media (max-width: 600px) {
@@ -376,10 +404,11 @@ button:disabled {
     flex-direction: column;
   }
 
-  .home-menu {
+.home-menu {
   display: grid;
-  gap: 16px;
-  margin: 24px 0;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin: 20px 0;
 }
 
 .menu-card {

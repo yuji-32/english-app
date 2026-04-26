@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import "./App.css";
-
+import { Mic, Volume2 } from "lucide-react";
 import { defaultWords } from "./data/defaultWords";
 
 const API_BASE_URL =
@@ -17,6 +17,8 @@ function App() {
 
   const [wordTab, setWordTab] = useState("default");
   const [defaultLevelTab, setDefaultLevelTab] = useState("easy");
+
+  const [isListening, setIsListening] = useState(false);
 
   const [words, setWords] = useState(() => {
   const saved = localStorage.getItem("english_words");
@@ -511,6 +513,54 @@ async function sendChatMessage() {
   }
 }
 
+function startVoiceInput() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("このブラウザは音声入力に対応していません。ChromeかEdgeで試してください。");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+  recognition.continuous = false;
+
+  recognition.onstart = () => {
+    setIsListening(true);
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    setChatInput(transcript);
+  };
+
+  recognition.onerror = () => {
+    alert("音声入力に失敗しました。もう一度試してください。");
+  };
+
+  recognition.onend = () => {
+    setIsListening(false);
+  };
+
+  recognition.start();
+}
+
+function speakText(text) {
+  if (!window.speechSynthesis) {
+    alert("このブラウザは音声読み上げに対応していません。");
+    return;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.9;
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
 function splitWords(text) {
   return text
     .replace(/[.,!?;:"]/g, "")
@@ -950,6 +1000,15 @@ if (screen === "chat") {
                       ))}
                   </div>
 
+                  {msg.role === "assistant" && (
+                    <button
+                    className="secondary-button"
+                    onClick={() => speakText(msg.english)}
+                    >
+                      <Volume2 size={20} />
+                    </button>
+                  )}
+
               {msg.japanese && (
                 <div className="example-text">日本語: {msg.japanese}</div>
               )}
@@ -978,6 +1037,12 @@ if (screen === "chat") {
         />
 
         <div className="button-group">
+          <button
+          className="icon-button"
+          onClick={startVoiceInput}
+          >
+            <Mic size={20} color={isListening ? "red" : "white"} />
+          </button>
           <button
             className="primary-button"
             onClick={sendChatMessage}
