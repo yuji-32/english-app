@@ -517,6 +517,7 @@ function startVoiceInput() {
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
+    const isVoiceInputSupported = !!SpeechRecognition;
   if (!SpeechRecognition) {
     alert("このブラウザは音声入力に対応していません。ChromeかEdgeで試してください。");
     return;
@@ -1043,6 +1044,13 @@ if (screen === "chat") {
           >
             <Mic size={20} color={isListening ? "red" : "white"} />
           </button>
+
+          {!isVoiceInputSupported && (
+            <p className="helper-text">
+              このブラウザは音声入力に対応していません。ChromeまたはEdgeで試してください。
+            </p>
+          )}
+
           <button
             className="primary-button"
             onClick={sendChatMessage}
