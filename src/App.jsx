@@ -625,6 +625,22 @@ function splitWords(text) {
         return text.includes(search.toLowerCase());
       });
 
+      const sortedVisibleWords = [...visibleWords].sort((a, b) => {
+  switch (sortType) {
+    case "old":
+      return String(a.id).localeCompare(String(b.id));
+    case "az":
+      return a.word.localeCompare(b.word);
+    case "weak":
+      return b.wrong - a.wrong;
+    case "level":
+      return a.level - b.level;
+    case "new":
+    default:
+      return String(b.id).localeCompare(String(a.id));
+  }
+});
+
   return (
     <div className="app">
       <div className="topbar">
@@ -708,13 +724,27 @@ function splitWords(text) {
       )}
 
       <div className="card">
-        <h2>単語一覧</h2>
+        <div className="list-header">
+          <h2>単語一覧</h2>
+          
+          <select
+          className="sort-select"
+          value={sortType}
+          onChange={(e) => setSortType(e.target.value)}
+          >
+            <option value="new">新しい順</option>
+            <option value="old">古い順</option>
+            <option value="az">A-Z順</option>
+            <option value="weak">間違い順</option>
+            <option value="level">習熟度順</option>
+          </select>
+        </div>
 
         {visibleWords.length === 0 ? (
           <p className="empty-text">単語がありません</p>
         ) : (
           <div className="word-list">
-            {visibleWords.map((w) => {
+            {sortedVisibleWords.map((w) => {
               const total = w.correct + w.wrong;
               const rate =
                 total === 0 ? 0 : Math.round((w.correct / total) * 100);
