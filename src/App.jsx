@@ -19,6 +19,9 @@ function App() {
   const [defaultLevelTab, setDefaultLevelTab] = useState("easy");
 
   const [isListening, setIsListening] = useState(false);
+  const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+  const isVoiceInputSupported = !!SpeechRecognition;
 
   const [words, setWords] = useState(() => {
   const saved = localStorage.getItem("english_words");
@@ -514,10 +517,6 @@ async function sendChatMessage() {
 }
 
 function startVoiceInput() {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    const isVoiceInputSupported = !!SpeechRecognition;
   if (!SpeechRecognition) {
     alert("このブラウザは音声入力に対応していません。ChromeかEdgeで試してください。");
     return;
@@ -1003,7 +1002,7 @@ if (screen === "chat") {
 
                   {msg.role === "assistant" && (
                     <button
-                    className="secondary-button"
+                    className="icon-button"
                     onClick={() => speakText(msg.english)}
                     >
                       <Volume2 size={20} />
@@ -1041,8 +1040,9 @@ if (screen === "chat") {
           <button
           className="icon-button"
           onClick={startVoiceInput}
+          disabled={!isVoiceInputSupported || isListening}
           >
-            <Mic size={20} color={isListening ? "red" : "white"} />
+            <Mic size={20} color={isListening ? "#ef4444" : "white"} />
           </button>
 
           {!isVoiceInputSupported && (
