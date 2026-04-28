@@ -626,20 +626,33 @@ function splitWords(text) {
       });
 
       const sortedVisibleWords = [...visibleWords].sort((a, b) => {
-  switch (sortType) {
-    case "old":
-      return String(a.id).localeCompare(String(b.id));
-    case "az":
-      return a.word.localeCompare(b.word);
-    case "weak":
-      return b.wrong - a.wrong;
-    case "level":
-      return a.level - b.level;
-    case "new":
-    default:
-      return String(b.id).localeCompare(String(a.id));
-  }
-});
+        const getRate = (w) => {
+          const total = w.correct + w.wrong;
+          return total === 0 ? 0 : w.correct / total;
+        };
+        
+        const getWeakScore = (w) => {
+          return w.wrong - w.correct;
+        };
+        
+        switch (sortType) {
+          case "old":
+            return String(a.id).localeCompare(String(b.id));
+            
+          case "az":
+            return a.word.localeCompare(b.word);
+
+          case "weak":
+            return getWeakScore(b) - getWeakScore(a);
+            
+          case "level":
+            return getRate(a) - getRate(b);
+            
+          case "new":
+          default:
+            return String(b.id).localeCompare(String(a.id));
+          }
+        });
 
   return (
     <div className="app">
@@ -1006,7 +1019,7 @@ if (screen === "chat") {
                 {splitWords(msg.english).map((w, i) => (
                   <span key={i} style={{ marginRight: "6px" }}>
                     <span
-                    title="クリックして単語帳に登録"
+                    title="単語を登録"
                     style={{
                       cursor: "pointer",
                       borderBottom: "1px dotted #999",
