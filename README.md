@@ -16,13 +16,13 @@ https://english-app-nu-nine.vercel.app/
 ## 画面イメージ
 
 * ホーム画面
-
+![home](image-2.png)
 * 単語一覧
-
+![list](image-3.png)
 * テスト画面
-
+![test](image-1.png)
 * AI英会話
-
+![AI](image-4.png)
 ---
 
 ## 主な機能
