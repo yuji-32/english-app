@@ -7,14 +7,6 @@
 
 🔗 https://english-app-nu-nine.vercel.app/
 
----
-
-## デモ
-
-https://english-app-nu-nine.vercel.app/
-
----
-
 ## 画面イメージ
 
 * ホーム画面
